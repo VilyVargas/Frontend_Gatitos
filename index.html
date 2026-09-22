@@ -449,25 +449,32 @@
                     const lista = document.getElementById("listaGatos");
                     lista.innerHTML = "";
 
-                    data.forEach((gato) => {
-                        const card = document.createElement("div");
-                        card.className = "col-md-6 col-lg-4";
-
-                        const imageUrl = gato.imagenUrl || "https://placecats.com/300/240";
-                        card.innerHTML = `
-            <div class="card h-100 gato-card">
-            <img src="${imageUrl}" class="gato-img" alt="${gato.nombre}">
-            <div class="card-body">
-                <h5 class="card-title">${gato.nombre}</h5>
-                <p class="mb-1"><strong>Edad:</strong> ${gato.edad}</p>
-                <p class="mb-1"><strong>Sexo:</strong> ${gato.sexo}</p>
-                <p class="mb-3"><strong>Raza:</strong> ${gato.raza}</p>
-                <button class="btn btn-warning btn-sm w-100" data-editar="${gato.id}">Actualizar</button>
+                    lista.innerHTML = data.map(gato => `
+          <div class="col-12 col-sm-6 col-xl-4">
+            <div class="card gato-card h-100">
+              <img src="${gato.imagenUrl}" class="card-img-top gato-img" alt="${gato.nombre}"
+                onerror="this.src='https://placehold.co/400x300?text=Sin+imagen'">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title mb-1">${gato.nombre}</h5>
+                <p class="card-text mb-1">
+                  <small class="text-muted">
+                    ${gato.raza} · ${gato.edad} años · ${gato.sexo}
+                  </small>
+                </p>
+                <div class="mt-auto d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-primary flex-fill"
+                          onclick='editarGato(${JSON.stringify(gato)})'>
+                    Actualizar
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger flex-fill"
+                          onclick="eliminarGato('${gato.id}', '${gato.nombre}')">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
             </div>
-            </div>
-        `;
-                        lista.appendChild(card);
-                    });
+          </div>
+        `).join("");
                 })
                 .catch((err) => {
                     console.error(err);
@@ -477,15 +484,7 @@
         }
 
         // ============ Editar ============
-        document.getElementById("listaGatos").addEventListener("click", async (event) => {
-            const editarBtn = event.target.closest("[data-editar]");
-
-            if (!editarBtn) return;
-
-            const gatoId = editarBtn.dataset.editar;
-            const response = await fetch(`${BACKEND_URL}/gato/${gatoId}`);
-            const gato = await response.json();
-
+        function editarGato(gato) {
             document.getElementById("gato_id").value = gato.id;
             document.getElementById("nombre").value = gato.nombre;
             document.getElementById("edad").value = gato.edad;
@@ -493,19 +492,45 @@
             document.getElementById("raza").value = gato.raza;
 
             const preview = document.getElementById("preview");
-            if (gato.imagenUrl) {
-                preview.src = gato.imagenUrl;
-                preview.style.display = "block";
-            } else {
-                preview.src = "";
-                preview.style.display = "none";
+            if (preview) {
+                if (gato.imagenUrl) {
+                    preview.src = gato.imagenUrl;
+                    preview.style.display = "block";
+                } else {
+                    preview.src = "";
+                    preview.style.display = "none";
+                }
             }
 
             const resultadoDiv = document.getElementById("resultado");
             resultadoDiv.className = "alert alert-info mt-4";
-            resultadoDiv.textContent = "Editando gato...";
+            resultadoDiv.textContent = `Editando a ${gato.nombre}.`;
             resultadoDiv.style.display = "block";
-        });
+        }
+
+        // ============ Eliminar ============
+        async function eliminarGato(id, nombre) {
+            const confirmar = confirm(`¿Estás seguro de eliminar a "${nombre}"?`);
+            if (!confirmar) return;
+
+            try {
+                const respuesta = await fetch(`${BACKEND_URL}/gato/${id}`, {
+                    method: "DELETE"
+                });
+
+                const data = await respuesta.json();
+
+                if (respuesta.ok) {
+                    alert(data.mensaje);
+                    mostrarListaGatos();
+                } else {
+                    alert(data.mensaje || "Error al eliminar el gato");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Error de conexión con el servidor.");
+            }
+        }
 
         document.getElementById("btnCancelar").addEventListener("click", () => {
             document.getElementById("formGato").reset();
