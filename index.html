@@ -207,6 +207,7 @@
                         <input type="file" class="form-control" id="imagen" accept="image/*" />
                         <small class="text-muted">Al editar, si no seleccionas una nueva imagen se mantiene la
                             actual.</small>
+                        <img id="preview" class="preview" alt="Vista previa" />
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">Registrar Gato</button>
@@ -230,136 +231,8 @@
     </div>
 
     <script>
-        const gatos = [
-            { id: 1, nombre: 'Michi', edad: 3, sexo: 'Macho', raza: 'Siamés', imagen: 'https://placecats.com/300/240' },
-            { id: 2, nombre: 'Luna', edad: 2, sexo: 'Hembra', raza: 'Persa', imagen: 'https://placecats.com/310/240' },
-            { id: 3, nombre: 'Nilo', edad: 5, sexo: 'Macho', raza: 'Maine Coon', imagen: 'https://placecats.com/320/240' }
-        ];
-
-        const form = document.getElementById('formGato');
-        const nombreInput = document.getElementById('nombre');
-        const edadInput = document.getElementById('edad');
-        const sexoInput = document.getElementById('sexo');
-        const razaInput = document.getElementById('raza');
-        const imagenInput = document.getElementById('imagen');
-        const listaGatos = document.getElementById('listaGatos');
-        const resultado = document.getElementById('resultado');
-        const btnCancelar = document.getElementById('btnCancelar');
-        const btnRecargar = document.getElementById('btnRecargar');
-        const gatoIdInput = document.getElementById('gato_id');
-
-        function renderGatos() {
-            listaGatos.innerHTML = '';
-
-            gatos.forEach((gato) => {
-                const card = document.createElement('div');
-                card.className = 'col-md-6 col-xl-4';
-
-                card.innerHTML = `
-          <div class="card h-100 gato-card">
-            <img src="${gato.imagen}" class="card-img-top gato-img" alt="${gato.nombre}">
-            <div class="card-body">
-              <h5 class="card-title">${gato.nombre}</h5>
-              <p class="card-text mb-1"><strong>Edad:</strong> ${gato.edad}</p>
-              <p class="card-text mb-1"><strong>Sexo:</strong> ${gato.sexo}</p>
-              <p class="card-text mb-3"><strong>Raza:</strong> ${gato.raza}</p>
-              <button class="btn btn-sm btn-warning w-100" data-editar="${gato.id}">Actualizar</button>
-            </div>
-          </div>
-        `;
-
-                listaGatos.appendChild(card);
-            });
-        }
-
-        function mostrarResultado(mensaje, tipo = 'success') {
-            resultado.textContent = mensaje;
-            resultado.className = `alert alert-${tipo} mt-4`;
-            resultado.style.display = 'block';
-        }
-
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-
-            const nombre = nombreInput.value.trim();
-            const edad = Number(edadInput.value);
-            const sexo = sexoInput.value.trim();
-            const raza = razaInput.value.trim();
-
-            if (!nombre || !sexo || !raza || Number.isNaN(edad)) {
-                mostrarResultado('Completa todos los campos requeridos.', 'danger');
-                return;
-            }
-
-            const gatoId = gatoIdInput.value;
-
-            if (gatoId) {
-                const gato = gatos.find((item) => item.id === Number(gatoId));
-                if (gato) {
-                    gato.nombre = nombre;
-                    gato.edad = edad;
-                    gato.sexo = sexo;
-                    gato.raza = raza;
-                    if (imagenInput.files[0]) {
-                        gato.imagen = URL.createObjectURL(imagenInput.files[0]);
-                    }
-                    mostrarResultado('Gato actualizado correctamente.', 'success');
-                }
-            } else {
-                const nuevoGato = {
-                    id: Date.now(),
-                    nombre,
-                    edad,
-                    sexo,
-                    raza,
-                    imagen: imagenInput.files[0]
-                        ? URL.createObjectURL(imagenInput.files[0])
-                        : 'https://placecats.com/300/240'
-                };
-
-                gatos.push(nuevoGato);
-                mostrarResultado('Gato registrado correctamente.', 'success');
-            }
-
-            form.reset();
-            gatoIdInput.value = '';
-            renderGatos();
-        });
-
-        listaGatos.addEventListener('click', (event) => {
-            const editarBtn = event.target.closest('[data-editar]');
-
-            if (editarBtn) {
-                const id = Number(editarBtn.dataset.editar);
-                const gato = gatos.find((item) => item.id === id);
-
-                if (gato) {
-                    gatoIdInput.value = gato.id;
-                    nombreInput.value = gato.nombre;
-                    edadInput.value = gato.edad;
-                    sexoInput.value = gato.sexo;
-                    razaInput.value = gato.raza;
-                    mostrarResultado(`Editando a ${gato.nombre}.`, 'info');
-                }
-            }
-        });
-
-        btnCancelar.addEventListener('click', () => {
-            form.reset();
-            gatoIdInput.value = '';
-            mostrarResultado('Edición cancelada.', 'secondary');
-        });
-
-        btnRecargar.addEventListener('click', () => {
-            renderGatos();
-            mostrarResultado('Lista actualizada.', 'info');
-        });
-
-        renderGatos();
-    </script>
-
-    <script>
-        const BACKEND_URL = "https://backend-gatitos-xef8.onrender.com//gatos";
+        const BACKEND_URL = "https://backend-gatitos-xef8.onrender.com";
+        let esEdicion = false;
 
         // ============ Vista previa de imagen ============
         document.getElementById("imagen").addEventListener("change", (e) => {
@@ -426,12 +299,19 @@
 
                 if (respuesta.ok) {
                     resultadoDiv.className = "alert alert-success mt-4";
-                    resultadoDiv.textContent = "Gato registrado correctamente.";
+                    resultadoDiv.textContent = esEdicion ? "Gato actualizado correctamente." : "Gato registrado correctamente.";
+                    resultadoDiv.style.display = "block";
                     document.getElementById("formGato").reset();
+                    document.getElementById("gato_id").value = "";
+                    esEdicion = false;
+                    const preview = document.getElementById("preview");
+                    preview.src = "";
+                    preview.style.display = "none";
                     mostrarListaGatos();
                 } else {
                     resultadoDiv.className = "alert alert-danger mt-4";
-                    resultadoDiv.textContent = "Error al procesar la solicitud.";
+                    resultadoDiv.textContent = data.mensaje || "Error al procesar la solicitud.";
+                    resultadoDiv.style.display = "block";
                 }
             } catch (error) {
                 console.error(error);
@@ -467,7 +347,7 @@
                     Actualizar
                   </button>
                   <button class="btn btn-sm btn-outline-danger flex-fill"
-                          onclick="eliminarcat('${gato.id}', '${gato.nombre}')">
+                          onclick="eliminarGato('${gato.id}', '${gato.nombre}')">
                     Eliminar
                   </button>
                 </div>
@@ -485,6 +365,7 @@
 
         // ============ Editar ============
         function editarGato(gato) {
+            esEdicion = true;
             document.getElementById("gato_id").value = gato.id;
             document.getElementById("nombre").value = gato.nombre;
             document.getElementById("edad").value = gato.edad;
@@ -533,8 +414,10 @@
         }
 
         document.getElementById("btnCancelar").addEventListener("click", () => {
+            esEdicion = false;
             document.getElementById("formGato").reset();
             document.getElementById("gato_id").value = "";
+            document.getElementById("resultado").style.display = "none";
             const preview = document.getElementById("preview");
             preview.src = "";
             preview.style.display = "none";
